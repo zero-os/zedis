@@ -1,3 +1,35 @@
-digraph {
-    
+graph zedis_concept {
+    rankdir="LR"
+    label="concept zedis"
+
+    client [shape=egg label="client"]
+
+    zedis [shape=rectangle label="zedis"]
+
+    subgraph zerostorBackend{
+        label="Backend clusters"
+        
+        subgraph zerostorCluster1 {
+            label="Cluster 1"
+            style="dotted"
+
+            etcd1 [label="etcd metadata server cluster"]
+            zerostor1 [label="0-stor storage cluster"]
+        }
+
+        subgraph zerostorCluster2 {
+            label="Cluster 2"
+            style="dotted"
+
+            etcd2 [label="etcd metadata server cluster"]
+            zerostor2 [label="0-stor storage cluster"]
+        }
+    }
+
+    client -- zedis [label="Redis protocol"]
+    zedis -- etcd1 [label="0-Stor connection"]
+    zedis -- zerostor1
+
+    zedis -- etcd2
+    zedis -- zerostor2
 }

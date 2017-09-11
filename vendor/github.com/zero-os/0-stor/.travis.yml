@@ -1,0 +1,31 @@
+matrix:
+  include:
+    - language: python
+      sudo: true
+      dist: trusty
+      python: 3.5
+      install:
+        - sudo apt install git -y
+        - pip3 install pyyaml
+        - pip3 install git+https://github.com/gigforks/packet-python.git
+        - curl -s https://install.zerotier.com/ | sudo bash
+      before_script:
+        - bash test/prepare_testing_env/run_tests.sh before
+      script:
+        - bash test/prepare_testing_env/run_tests.sh test $TEST_CASE
+      after_script:
+        - bash test/prepare_testing_env/run_tests.sh after
+
+    - language: go
+      sudo: true
+      dist: trusty
+      go: 1.9
+      install: skip
+      script: make testserverrace
+
+    - language: go
+      sudo: true
+      dist: trusty
+      go: 1.9
+      install: skip
+      script: make testclientrace

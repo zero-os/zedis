@@ -1,0 +1,27 @@
+language: go
+
+addons:
+  # Currently there is a bug in firefox 55.0 causing disconnects in travis and test failures
+  firefox: "54.0"
+  chrome: stable
+
+install:
+  - go get -u github.com/jteeuwen/go-bindata/...
+  - go get -u -d github.com/Jumpscale/go-raml
+  - npm install
+
+go:
+  - 1.7
+  - master
+
+before_script:
+  - export DISPLAY=:99.0
+  - sh -e /etc/init.d/xvfb start
+  # Some time for xvfb to start
+  - sleep 3
+
+script:
+  - cd $GOPATH/src/github.com/Jumpscale/go-raml &&  ./build.sh && cd -
+  - go generate
+  - go test -v ./...
+  - npm test

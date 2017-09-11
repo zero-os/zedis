@@ -1,0 +1,13 @@
+{
+  "scripts": {
+      "test": "node_modules/karma/bin/karma start karma.conf.js --singleRun"
+  },
+  "devDependencies": {
+    "angular-mocks": "1.5.9",
+    "jasmine-core": "^2.7.0",
+    "karma": "^1.7.0",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-firefox-launcher": "^1.0.0",
+    "karma-jasmine": "^1.1.0"
+  }
+}
