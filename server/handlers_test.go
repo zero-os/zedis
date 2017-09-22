@@ -17,6 +17,9 @@ func init() {
 	connsJWT = make(map[redcon.Conn]string)
 	connsJWTLock = &sync.Mutex{}
 	zConfig = new(config.Zedis)
+	zConfig.AuthCommands = make(map[string]struct{})
+	zConfig.AuthCommands["SET"] = struct{}{}
+
 }
 
 func TestPing(t *testing.T) {

@@ -3,6 +3,7 @@ package config
 
 import (
 	"io/ioutil"
+	"strings"
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/zero-os/0-stor/client"
@@ -27,21 +28,43 @@ func NewZedisConfigFromFile(filePath string) (*Zedis, error) {
 		return nil, err
 	}
 
+	// parse authenticated commands
+	parseAuthCommands(zc)
+
 	return zc, nil
+}
+
+func parseAuthCommands(zc *Zedis) {
+	zc.AuthCommands = make(map[string]struct{})
+	// default
+	if zc.AuthCommandsInput == "" {
+		zc.AuthCommands["SET"] = struct{}{}
+		return
+	}
+
+	authList := strings.Split(zc.AuthCommandsInput, ",")
+	for _, a := range authList {
+		a = strings.TrimSpace(a)
+		a = strings.ToUpper(a)
+		zc.AuthCommands[a] = struct{}{}
+	}
 }
 
 // Zedis represents a full zedis config
 type Zedis struct {
 	// Port of the Redis interface
 	Port string `yaml:"port" valid:"required"`
+	//TLS protected port of the Redis interface
+	TLSPort string `yaml:"tls_port" valid:"required"`
+
+	// Defines the commands that require authentication
+	AuthCommandsInput string `yaml:"auth_commands"`
+	// Parsed AuthCommandsInput into a map of commands that require authentication
+	AuthCommands map[string]struct{} `yaml:"-"`
 
 	// JWT authentication
 	JWTOrganization string `yaml:"jwt_organization" valid:"required"`
 	JWTNamespace    string `yaml:"jwt_namespace" valid:"required"`
-
-	// TLS specific
-	// Port TLS protected Redis interface
-	TLSPort string `yaml:"tls_port" valid:"required"`
 
 	// ACME (let's encrypt) TLS proxy
 	// defines if caddy should be used

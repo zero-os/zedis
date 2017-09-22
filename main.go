@@ -13,10 +13,7 @@ func main() {
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 	log.SetOutput(os.Stdout)
 
-	if err := cmd.RootCmd.Execute(); err != nil {
-		log.Error(err)
-		os.Exit(1)
-	}
+	cmd.Execute()
 
 	if cmd.Verbose {
 		log.SetLevel(log.DebugLevel)

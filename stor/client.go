@@ -3,6 +3,7 @@ package stor
 import (
 	"errors"
 
+	"github.com/zero-os/0-Disk/log"
 	"github.com/zero-os/0-stor/client"
 )
 
@@ -46,12 +47,16 @@ func (sc *storClient) Close() {
 
 // Read reads from the stor
 func (sc *storClient) Read(key []byte) ([]byte, error) {
+	log.Debug("Reading from 0-stor...")
+	defer log.Debug("Done reading from the 0-stor")
 	val, _, err := sc.client.Read(key)
 	return val, err
 }
 
 // Write writes to the stor
 func (sc *storClient) Write(key []byte, value []byte) error {
+	log.Debug("Writing to 0-stor...")
+	defer log.Debug("Done writing to the 0-stor")
 	_, err := sc.client.Write(key, value, nil)
 	return err
 }
