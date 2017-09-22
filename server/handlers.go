@@ -7,6 +7,7 @@ import (
 
 var (
 	permissionValidator = jwt.ValidatePermission
+	stillValid          = jwt.StillValid
 )
 
 func ping(conn redcon.Conn) {
@@ -53,7 +54,7 @@ func set(conn redcon.Conn, cmd redcon.Command) {
 		conn.WriteString("ERR no JWT found for this connection")
 		return
 	}
-	err := permissionValidator(jwtStr, zConfig.JWTOrganization, zConfig.JWTNamespace)
+	err := stillValid(jwtStr)
 	if err != nil {
 		conn.WriteString("ERR JWT invalid: " + err.Error())
 		return

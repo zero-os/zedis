@@ -71,7 +71,7 @@ func TestAuth(t *testing.T) {
 }
 
 func TestSet(t *testing.T) {
-	permissionValidator = stubAuthValidator
+	stillValid = stubStillValid
 	stubStorClient := newStubStorClient()
 	storClient = stubStorClient
 	conn := new(stubConn)
@@ -100,7 +100,7 @@ func TestSet(t *testing.T) {
 	assert.Equal(t, []byte("value"), stubStorClient.stor["key"])
 
 	// invalid jwt
-	permissionValidator = stubAuthValidatorErr
+	stillValid = stubStillValidErr
 	cmd.Args = [][]byte{
 		[]byte("SET"),
 		[]byte("key"),
@@ -224,5 +224,15 @@ func stubAuthValidator(jwtStr, organization, namespace string) error {
 
 // stub validator that returns "a stub error" error
 func stubAuthValidatorErr(jwtStr, organization, namespace string) error {
+	return errors.New("a stub error")
+}
+
+// stub still valid validator that returns nil
+func stubStillValid(jwtStr string) error {
+	return nil
+}
+
+// stub still valid validator that returns an error
+func stubStillValidErr(jwtStr string) error {
 	return errors.New("a stub error")
 }
