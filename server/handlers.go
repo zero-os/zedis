@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	permissionValidator = jwt.ValidatePermission
-	stillValid          = jwt.StillValid
+	permissionValidator  = jwt.ValidatePermission
+	stillValidWithScopes = jwt.StillValidWithScopes
 )
 
 func ping(conn redcon.Conn) {
@@ -61,7 +61,7 @@ func set(conn redcon.Conn, cmd redcon.Command) {
 			conn.WriteError("ERR no JWT found for this connection")
 			return
 		}
-		err := stillValid(jwtStr)
+		err := stillValidWithScopes(jwtStr, jwt.WriteScopes(zConfig.Organization, zConfig.Namespace))
 		if err != nil {
 			conn.WriteError("ERR JWT invalid: " + err.Error())
 			return
@@ -77,6 +77,23 @@ func get(conn redcon.Conn, cmd redcon.Command) {
 	if len(cmd.Args) != 2 {
 		conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
 		return
+	}
+
+	// check authentication
+	_, authorize := zConfig.AuthCommands[string(cmd.Args[0])]
+	if authorize {
+		connsJWTLock.Lock()
+		jwtStr, ok := connsJWT[conn]
+		connsJWTLock.Unlock()
+		if !ok {
+			conn.WriteError("ERR no JWT found for this connection")
+			return
+		}
+		err := stillValidWithScopes(jwtStr, jwt.ReadScopes(zConfig.Organization, zConfig.Namespace))
+		if err != nil {
+			conn.WriteError("ERR JWT invalid: " + err.Error())
+			return
+		}
 	}
 
 	val, err := storClient.Read(cmd.Args[1])

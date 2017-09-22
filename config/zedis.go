@@ -34,6 +34,12 @@ func NewZedisConfigFromFile(filePath string) (*Zedis, error) {
 	return zc, nil
 }
 
+// list of all commands that could need authentication
+var allAUTHCommands = []string{
+	"GET",
+	"SET",
+}
+
 func parseAuthCommands(zc *Zedis) {
 	zc.AuthCommands = make(map[string]struct{})
 	// default
@@ -43,6 +49,20 @@ func parseAuthCommands(zc *Zedis) {
 	}
 
 	authList := strings.Split(zc.AuthCommandsInput, ",")
+
+	// if no authentication required
+	if strings.ToLower(authList[0]) == "none" {
+		return
+	}
+
+	// if all supported commands need authentication
+	if strings.ToLower(authList[0]) == "all" {
+		for _, a := range allAUTHCommands {
+			zc.AuthCommands[a] = struct{}{}
+		}
+		return
+	}
+
 	for _, a := range authList {
 		a = strings.TrimSpace(a)
 		a = strings.ToUpper(a)

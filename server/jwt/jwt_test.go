@@ -23,8 +23,10 @@ var (
 )
 
 func init() {
+	log.SetLevel(log.DebugLevel)
 	b, err := ioutil.ReadFile("./devcert/jwt_pub.pem")
 	if err != nil {
+		log.Error(err)
 		os.Exit(2)
 	}
 	SetJWTPublicKey(string(b))
@@ -36,8 +38,8 @@ func TestJWT(t *testing.T) {
 
 	writeToken := getToken(t, 24, itsyouonline.Permission{Write: true}, org, namespace)
 	adminToken := getToken(t, 24, itsyouonline.Permission{Admin: true}, org, namespace)
-	readToken := getToken(t, 24, itsyouonline.Permission{Read: true}, org, namespace)
 	expiredToken := getToken(t, -24, itsyouonline.Permission{Write: true}, org, namespace)
+	invalidOrgtoken := getToken(t, 24, itsyouonline.Permission{Write: true}, "not"+org, namespace)
 
 	// test valid permission
 	err := ValidatePermission(writeToken, org, namespace)
@@ -48,14 +50,6 @@ func TestJWT(t *testing.T) {
 	err = ValidatePermission(adminToken, org, namespace)
 	assert.NoError(err)
 
-	// test invalid permission
-	err = ValidatePermission(readToken, org, namespace)
-	assert.Error(err)
-	log.Error(err)
-	// test invalid token in cache
-	err = ValidatePermission(readToken, org, namespace)
-	assert.Error(err)
-
 	// test expired token
 	err = ValidatePermission(expiredToken, org, namespace)
 	assert.Error(err)
@@ -63,30 +57,38 @@ func TestJWT(t *testing.T) {
 	// test expired token in cache
 	err = ValidatePermission(expiredToken, org, namespace)
 	assert.Error(err)
-}
 
-func TestStillValid(t *testing.T) {
-	assert := assert.New(t)
-	validToken1 := getToken(t, 24, itsyouonline.Permission{Write: true}, org, namespace)
-	validToken2 := getToken(t, 24, itsyouonline.Permission{Admin: true}, org, namespace)
-	expiredToken := getToken(t, -24, itsyouonline.Permission{Write: true}, org, namespace)
-
-	//cache token1
-	err := ValidatePermission(validToken1, org, namespace)
-	assert.NoError(err)
-
-	// check if cached token is still valid
-	err = StillValid(validToken1)
-	assert.NoError(err)
-
-	// test valid non cached token
-	err = StillValid(validToken2)
-	assert.NoError(err)
-
-	// test non cached expired token
-	err = StillValid(expiredToken)
+	// test token without zedis scopes
+	err = ValidatePermission(invalidOrgtoken, org, namespace)
 	assert.Error(err)
 	log.Error(err)
+}
+
+func TestStillValidWithScopes(t *testing.T) {
+	assert := assert.New(t)
+	writeToken := getToken(t, 24, itsyouonline.Permission{Write: true}, org, namespace)
+	readToken := getToken(t, 24, itsyouonline.Permission{Read: true}, org, namespace)
+	adminToken := getToken(t, 24, itsyouonline.Permission{Admin: true}, org, namespace)
+
+	// test if write token is valid
+	err := StillValidWithScopes(writeToken, WriteScopes(org, namespace))
+	assert.NoError(err)
+
+	// test if read token is valid
+	err = StillValidWithScopes(readToken, ReadScopes(org, namespace))
+	assert.NoError(err)
+
+	// test if write token with read scopes
+	err = StillValidWithScopes(writeToken, ReadScopes(org, namespace))
+	//assert.Error(err)
+	log.Error(err)
+
+	// check if admin token has read and write rights
+	err = StillValidWithScopes(adminToken, ReadScopes(org, namespace))
+	assert.NoError(err, "admin should have read access")
+	err = StillValidWithScopes(adminToken, WriteScopes(org, namespace))
+	assert.NoError(err, "admin should have write access")
+
 }
 
 func getToken(t *testing.T, hoursValid time.Duration, perm itsyouonline.Permission, org, namespace string) string {

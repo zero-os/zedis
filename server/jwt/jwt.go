@@ -3,10 +3,11 @@ package jwt
 import (
 	"crypto"
 	"fmt"
-	"log"
+	"os"
 	"strings"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/karlseguin/ccache"
 )
@@ -40,7 +41,8 @@ func init() {
 	var err error
 	iyoPublicKey, err = jwtgo.ParseECPublicKeyFromPEM([]byte(iyoPublicKeyStr))
 	if err != nil {
-		log.Fatalf("failed to parse pub key:%v", err)
+		log.Errorf("failed to parse pub key:%v", err)
+		os.Exit(1)
 	}
 
 	conf := ccache.Configure()
@@ -87,20 +89,17 @@ func ValidatePermission(jwtStr, organization, namespace string) error {
 		}
 	}
 
-	expectedScopes := []string{
-		organization + "." + namespace,
-		organization + "." + namespace + ".write",
+	hasValidScope := false
+	for _, scope := range scopes {
+		scope = strings.Replace(scope, "user:memberof:", "", 1)
+		if strings.HasPrefix(scope, organization+"."+namespace) {
+			hasValidScope = true
+			break
+		}
 	}
 
-	canSet := checkPermissions(expectedScopes, scopes)
-	if !canSet {
-		cacheVal := jwtCacheVal{
-			valid:  false,
-			scopes: scopes,
-		}
-		jwtCache.Set(jwtStr, cacheVal, time.Until(time.Unix(exp, 0)))
-
-		return fmt.Errorf("user does not not have the right scope")
+	if !hasValidScope {
+		return fmt.Errorf("JWT does not contain a scope Zedis requires")
 	}
 
 	cacheVal := jwtCacheVal{
@@ -112,8 +111,8 @@ func ValidatePermission(jwtStr, organization, namespace string) error {
 	return nil
 }
 
-// StillValid checks if a JWT is still valid (expiration)
-func StillValid(jwtStr string) error {
+// StillValidWithScopes checks if a JWT is still valid (expiration) and has required scopes
+func StillValidWithScopes(jwtStr string, expectedScopes []string) error {
 	item := jwtCache.Get(jwtStr)
 	if item != nil {
 		cacheVal := item.Value().(jwtCacheVal)
@@ -126,6 +125,10 @@ func StillValid(jwtStr string) error {
 			return fmt.Errorf("expired JWT token")
 		}
 
+		if !checkPermissions(expectedScopes, cacheVal.scopes) {
+			return fmt.Errorf("JWT does not have the right scope")
+		}
+
 		// cached value should be valid now
 		return nil
 	}
@@ -136,7 +139,32 @@ func StillValid(jwtStr string) error {
 		return err
 	}
 
+	scopes, err := getScopes(jwtStr)
+	if err != nil {
+		return err
+	}
+
+	if !checkPermissions(expectedScopes, scopes) {
+		return fmt.Errorf("JWT does not have the right scope")
+	}
+
 	return nil
+}
+
+// ReadScopes returns the required reading scopes to read from Zedis
+func ReadScopes(organization, namespace string) []string {
+	return []string{
+		organization + "." + namespace,
+		organization + "." + namespace + ".read",
+	}
+}
+
+// WriteScopes returns the required writing scopes to write to Zedis
+func WriteScopes(organization, namespace string) []string {
+	return []string{
+		organization + "." + namespace,
+		organization + "." + namespace + ".write",
+	}
 }
 
 // get scopes from the cache
@@ -221,6 +249,29 @@ func checkJWTExpiration(jwtStr string) error {
 	}
 
 	return nil
+}
+
+func getScopes(jwtStr string) ([]string, error) {
+	token, err := jwtgo.Parse(jwtStr, func(token *jwtgo.Token) (interface{}, error) {
+		if token.Method != jwtgo.SigningMethodES384 {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return iyoPublicKey, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := token.Claims.(jwtgo.MapClaims)
+	if !(ok && token.Valid) {
+		return nil, fmt.Errorf("invalid JWT token")
+	}
+
+	var scopes []string
+	for _, v := range claims["scope"].([]interface{}) {
+		scopes = append(scopes, v.(string))
+	}
+
+	return scopes, nil
 }
 
 // CheckPermissions checks whether user has needed scopes
