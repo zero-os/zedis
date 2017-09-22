@@ -50,10 +50,16 @@
   revision = "553a641470496b2327abcac10b36396bd98e45c9"
 
 [[projects]]
+  name = "github.com/inconshreveable/mousetrap"
+  packages = ["."]
+  revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
+  version = "v1.0"
+
+[[projects]]
+  branch = "master"
   name = "github.com/itsyouonline/identityserver"
   packages = ["clients/go/itsyouonline","clients/go/itsyouonline/goraml"]
-  revision = "22ab81f07fc377524ea35e878db70e51af7c0907"
-  version = "v0.9.15"
+  revision = "6cd26e8e70c79f44746569421f446aa0e954f00b"
 
 [[projects]]
   name = "github.com/karlseguin/ccache"
@@ -71,6 +77,18 @@
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/spf13/cobra"
+  packages = ["."]
+  revision = "b78744579491c1ceeaaa3b40205e56b0591b93a3"
+
+[[projects]]
+  name = "github.com/spf13/pflag"
+  packages = ["."]
+  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
   version = "v1.0.0"
 
 [[projects]]
@@ -147,6 +165,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ff142b334c052b43ff8a342d2014ae837dff628d87c2b7afee2f29fe9f81cab2"
+  inputs-digest = "73116d7adbdd54a3f4da5001a95415fbe8a3b24a4f7b076463587158f4ef0509"
   solver-name = "gps-cdcl"
   solver-version = 1

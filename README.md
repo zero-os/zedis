@@ -43,7 +43,7 @@ For security the AUTH command and commands requiring authentication are only ava
 Some Redis commands require authentication (e.g.: SET), these will be authenticated with a [JWT][jwt] from [itsyou.online][iyo].
 A JWT for the connection can be set with the AUTH [command](#supported-redis-commands).
 
-The user needs to be member of the write or admin sub organization or the zedis namespace to have permission to SET to Zedis and provide that scope in the JWT, e.g. : 
+The user needs to be member of the the zedis namespace (admin) or write sub organization of the zedis namespace to have permission to SET to Zedis and provide that scope in the JWT, e.g. :
 
 ```js
 // data part of the JWT
