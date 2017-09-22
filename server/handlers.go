@@ -29,7 +29,7 @@ func auth(conn redcon.Conn, cmd redcon.Command) {
 
 	err := permissionValidator(jwtStr, zConfig.JWTOrganization, zConfig.JWTNamespace)
 	if err != nil {
-		conn.WriteString("ERR invalid JWT: " + err.Error())
+		conn.WriteError("ERR invalid JWT: " + err.Error())
 		return
 	}
 
@@ -51,12 +51,12 @@ func set(conn redcon.Conn, cmd redcon.Command) {
 	jwtStr, ok := connsJWT[conn]
 	connsJWTLock.Unlock()
 	if !ok {
-		conn.WriteString("ERR no JWT found for this connection")
+		conn.WriteError("ERR no JWT found for this connection")
 		return
 	}
 	err := stillValid(jwtStr)
 	if err != nil {
-		conn.WriteString("ERR JWT invalid: " + err.Error())
+		conn.WriteError("ERR JWT invalid: " + err.Error())
 		return
 	}
 
@@ -74,7 +74,7 @@ func get(conn redcon.Conn, cmd redcon.Command) {
 	val, err := storClient.Read(cmd.Args[1])
 
 	if err != nil {
-		conn.WriteNull()
+		conn.WriteError("ERR reading from the stor: " + err.Error())
 		return
 	}
 
