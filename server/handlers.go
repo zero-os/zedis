@@ -12,18 +12,18 @@ var (
 )
 
 func ping(conn redcon.Conn) {
-	log.Debug("received PING request from %s", conn.RemoteAddr())
+	log.Debugf("received PING request from %s", conn.RemoteAddr())
 	conn.WriteString("PONG")
 }
 
 func quit(conn redcon.Conn) {
-	log.Debug("received QUIT request from %s", conn.RemoteAddr())
+	log.Debugf("received QUIT request from %s", conn.RemoteAddr())
 	conn.WriteString("OK")
 	conn.Close()
 }
 
 func auth(conn redcon.Conn, cmd redcon.Command) {
-	log.Debug("received AUTH request from %s", conn.RemoteAddr())
+	log.Debugf("received AUTH request from %s", conn.RemoteAddr())
 	if len(cmd.Args) != 2 {
 		conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
 		return
@@ -45,7 +45,7 @@ func auth(conn redcon.Conn, cmd redcon.Command) {
 }
 
 func set(conn redcon.Conn, cmd redcon.Command) {
-	log.Debug("received SET request from %s", conn.RemoteAddr())
+	log.Debugf("received SET request from %s", conn.RemoteAddr())
 	if len(cmd.Args) != 3 {
 		conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
 		return
@@ -73,7 +73,7 @@ func set(conn redcon.Conn, cmd redcon.Command) {
 }
 
 func get(conn redcon.Conn, cmd redcon.Command) {
-	log.Debug("received GET request from %s", conn.RemoteAddr())
+	log.Debugf("received GET request from %s", conn.RemoteAddr())
 	if len(cmd.Args) != 2 {
 		conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
 		return
@@ -90,6 +90,6 @@ func get(conn redcon.Conn, cmd redcon.Command) {
 }
 
 func unknown(conn redcon.Conn, cmd redcon.Command) {
-	log.Debug("received unknown command %s from %s", string(cmd.Args[0]), conn.RemoteAddr())
+	log.Debugf("received unknown command %s from %s", string(cmd.Args[0]), conn.RemoteAddr())
 	conn.WriteError("ERR unknown command '" + string(cmd.Args[0]) + "'")
 }
