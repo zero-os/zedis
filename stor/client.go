@@ -3,7 +3,7 @@ package stor
 import (
 	"errors"
 
-	"github.com/zero-os/0-Disk/log"
+	log "github.com/Sirupsen/logrus"
 	"github.com/zero-os/0-stor/client"
 )
 
