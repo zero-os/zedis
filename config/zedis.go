@@ -10,6 +10,12 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// list of all commands that could need authentication
+var allAUTHCommands = []string{
+	"GET",
+	"SET",
+}
+
 // NewZedisConfigFromFile returns a full zedis config from a given YAML file
 func NewZedisConfigFromFile(filePath string) (*Zedis, error) {
 	zc := new(Zedis)
@@ -32,12 +38,6 @@ func NewZedisConfigFromFile(filePath string) (*Zedis, error) {
 	parseAuthCommands(zc)
 
 	return zc, nil
-}
-
-// list of all commands that could need authentication
-var allAUTHCommands = []string{
-	"GET",
-	"SET",
 }
 
 func parseAuthCommands(zc *Zedis) {
