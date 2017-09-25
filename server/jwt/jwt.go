@@ -1,3 +1,4 @@
+//Package jwt provides JWT helper functions for authenticating a connection
 package jwt
 
 import (

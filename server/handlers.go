@@ -58,10 +58,10 @@ func set(conn redcon.Conn, cmd redcon.Command) {
 		jwtStr, ok := connsJWT[conn]
 		connsJWTLock.Unlock()
 		if !ok {
-			conn.WriteError("ERR no JWT found for this connection")
+			conn.WriteError("ERR no authentication token found for this connection")
 			return
 		}
-		err := stillValidWithScopes(jwtStr, jwt.WriteScopes(zConfig.Organization, zConfig.Namespace))
+		err := stillValidWithScopes(jwtStr, jwt.WriteScopes(zConfig.JWTOrganization, zConfig.JWTNamespace))
 		if err != nil {
 			conn.WriteError("ERR JWT invalid: " + err.Error())
 			return
@@ -86,10 +86,10 @@ func get(conn redcon.Conn, cmd redcon.Command) {
 		jwtStr, ok := connsJWT[conn]
 		connsJWTLock.Unlock()
 		if !ok {
-			conn.WriteError("ERR no JWT found for this connection")
+			conn.WriteError("ERR no authentication token found for this connection")
 			return
 		}
-		err := stillValidWithScopes(jwtStr, jwt.ReadScopes(zConfig.Organization, zConfig.Namespace))
+		err := stillValidWithScopes(jwtStr, jwt.ReadScopes(zConfig.JWTOrganization, zConfig.JWTNamespace))
 		if err != nil {
 			conn.WriteError("ERR JWT invalid: " + err.Error())
 			return

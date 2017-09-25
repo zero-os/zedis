@@ -34,12 +34,14 @@ func ListenAndServeRedis(cfg *config.Zedis) error {
 	var errChannel chan error
 
 	// serve Redis over plain TCP
-	go func() {
-		log.Infof("Redis plain TCP interface listening at localhost%s", zConfig.Port)
-		defer log.Info("Redis plain TCP interface closed")
+	if zConfig.Port != "" {
+		go func() {
+			log.Infof("Redis plain TCP interface listening at localhost%s", zConfig.Port)
+			defer log.Info("Redis plain TCP interface closed")
 
-		errChannel <- redcon.ListenAndServe(zConfig.Port, handler, accept, closed)
-	}()
+			errChannel <- redcon.ListenAndServe(zConfig.Port, handler, accept, closed)
+		}()
+	}
 
 	go func() {
 		// serve Redis over TCP with TLS
@@ -52,7 +54,7 @@ func ListenAndServeRedis(cfg *config.Zedis) error {
 		log.Infof("Redis TLS interface listening at localhost%s", zConfig.TLSPort)
 		defer log.Info("Redis TLS interface closed")
 
-		errChannel <- redcon.ListenAndServeTLS(zConfig.TLSPort, handlerTLS, accept, closed, tlsCfg)
+		errChannel <- redcon.ListenAndServeTLS(zConfig.TLSPort, handler, accept, closed, tlsCfg)
 	}()
 
 	// return if context is done or error
@@ -65,21 +67,6 @@ func ListenAndServeRedis(cfg *config.Zedis) error {
 
 // redcon plain tcp handler func
 func handler(conn redcon.Conn, cmd redcon.Command) {
-	switch strings.ToLower(string(cmd.Args[0])) {
-	case "ping":
-		ping(conn)
-	case "quit":
-		quit(conn)
-	case "get":
-		get(conn, cmd)
-	default:
-		unknown(conn, cmd)
-	}
-}
-
-// redcon tls tcp handler func
-// redcon handler func
-func handlerTLS(conn redcon.Conn, cmd redcon.Command) {
 	switch strings.ToLower(string(cmd.Args[0])) {
 	case "ping":
 		ping(conn)

@@ -15,16 +15,13 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
-const (
+var (
 	// how long self signed certificates are valid
-	certLifespan = 365 * (24 * time.Hour)
+	certLifespan = 3650 * (24 * time.Hour)
 	// renewInterval is how often to check the self signed certificates for renewal
 	renewInterval = 24 * time.Hour
 	// renewDurationBefore is how long before expiration to renew certificates.
 	renewDurationBefore = 30 * (24 * time.Hour)
-)
-
-var (
 	// selfsigned certificate cache
 	certCache *tls.Certificate
 	// selfsigned certificate lock
@@ -35,7 +32,7 @@ var (
 func tlsConfig(zc *config.Zedis) (*tls.Config, error) {
 	// When ACME (let's encrypt is requested by config)
 	if zc.ACME {
-		log.Info("Using ACME (let's encrypt) TLS certificates")
+		log.Debug("Using ACME (let's encrypt) TLS certificates")
 		m := &autocert.Manager{
 			Prompt: autocert.AcceptTOS,
 		}
@@ -49,7 +46,7 @@ func tlsConfig(zc *config.Zedis) (*tls.Config, error) {
 	}
 
 	// In memory self signed certificates
-	log.Info("Using self generated TLS certificates")
+	log.Debug("Using self generated TLS certificates")
 
 	cert, err := genCertPair()
 	if err != nil {

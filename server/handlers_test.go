@@ -88,7 +88,7 @@ func TestSet(t *testing.T) {
 	}
 
 	set(conn, cmd)
-	assert.Equal(t, "ERR no JWT found for this connection", conn.s)
+	assert.Equal(t, "ERR no authentication token found for this connection", conn.s)
 
 	// valid args and jwt present
 	connsJWT[conn] = "aJWT"

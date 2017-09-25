@@ -40,40 +40,10 @@ func NewZedisConfigFromFile(filePath string) (*Zedis, error) {
 	return zc, nil
 }
 
-func parseAuthCommands(zc *Zedis) {
-	zc.AuthCommands = make(map[string]struct{})
-	// default
-	if zc.AuthCommandsInput == "" {
-		zc.AuthCommands["SET"] = struct{}{}
-		return
-	}
-
-	authList := strings.Split(zc.AuthCommandsInput, ",")
-
-	// if no authentication required
-	if strings.ToLower(authList[0]) == "none" {
-		return
-	}
-
-	// if all supported commands need authentication
-	if strings.ToLower(authList[0]) == "all" {
-		for _, a := range allAUTHCommands {
-			zc.AuthCommands[a] = struct{}{}
-		}
-		return
-	}
-
-	for _, a := range authList {
-		a = strings.TrimSpace(a)
-		a = strings.ToUpper(a)
-		zc.AuthCommands[a] = struct{}{}
-	}
-}
-
 // Zedis represents a full zedis config
 type Zedis struct {
 	// Port of the Redis interface
-	Port string `yaml:"port" valid:"required"`
+	Port string `yaml:"port"`
 	//TLS protected port of the Redis interface
 	TLSPort string `yaml:"tls_port" valid:"required"`
 
@@ -154,4 +124,34 @@ func (zc *Zedis) StorPolicy() client.Policy {
 	}
 
 	return policy
+}
+
+func parseAuthCommands(zc *Zedis) {
+	zc.AuthCommands = make(map[string]struct{})
+	// default
+	if zc.AuthCommandsInput == "" {
+		zc.AuthCommands["SET"] = struct{}{}
+		return
+	}
+
+	authList := strings.Split(zc.AuthCommandsInput, ",")
+
+	// if no authentication required
+	if strings.ToLower(authList[0]) == "none" {
+		return
+	}
+
+	// if all supported commands need authentication
+	if strings.ToLower(authList[0]) == "all" {
+		for _, a := range allAUTHCommands {
+			zc.AuthCommands[a] = struct{}{}
+		}
+		return
+	}
+
+	for _, a := range authList {
+		a = strings.TrimSpace(a)
+		a = strings.ToUpper(a)
+		zc.AuthCommands[a] = struct{}{}
+	}
 }
