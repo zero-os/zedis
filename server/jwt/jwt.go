@@ -76,7 +76,8 @@ func ValidatePermission(jwtStr, organization, namespace string) error {
 
 	if !inCache {
 		scopes, exp, err = checkJWTGetScopes(jwtStr)
-		if err != nil || time.Until(time.Unix(exp, 0)).Seconds() < 0 {
+		if err != nil || time.Until(time.Unix(exp, 0)).Seconds() <= 0 {
+
 			// Insert invalid or expired JWT token to cache
 			// so we don't need to validate it again
 			jwtCache.Set(jwtStr, jwtCacheVal{
@@ -103,10 +104,16 @@ func ValidatePermission(jwtStr, organization, namespace string) error {
 		return fmt.Errorf("JWT does not contain a scope Zedis requires")
 	}
 
+	exp, err = checkJWTExpiration(jwtStr)
+	if err != nil {
+		return err
+	}
+
 	cacheVal := jwtCacheVal{
 		valid:  true,
 		scopes: scopes,
 	}
+
 	jwtCache.Set(jwtStr, cacheVal, time.Until(time.Unix(exp, 0)))
 
 	return nil
@@ -116,6 +123,7 @@ func ValidatePermission(jwtStr, organization, namespace string) error {
 func StillValidWithScopes(jwtStr string, expectedScopes []string) error {
 	item := jwtCache.Get(jwtStr)
 	if item != nil {
+		log.Debug("checking cached JWT")
 		cacheVal := item.Value().(jwtCacheVal)
 		if !cacheVal.valid {
 			return fmt.Errorf("invalid JWT token")
@@ -135,7 +143,7 @@ func StillValidWithScopes(jwtStr string, expectedScopes []string) error {
 	}
 
 	// item not in cache
-	err := checkJWTExpiration(jwtStr)
+	exp, err := checkJWTExpiration(jwtStr)
 	if err != nil {
 		return err
 	}
@@ -148,6 +156,12 @@ func StillValidWithScopes(jwtStr string, expectedScopes []string) error {
 	if !checkPermissions(expectedScopes, scopes) {
 		return fmt.Errorf("JWT does not have the right scope")
 	}
+
+	cacheVal := jwtCacheVal{
+		valid:  true,
+		scopes: scopes,
+	}
+	jwtCache.Set(jwtStr, cacheVal, time.Until(time.Unix(exp, 0)))
 
 	return nil
 }
@@ -168,6 +182,12 @@ func WriteScopes(organization, namespace string) []string {
 	}
 }
 
+func AdminScopes(organization, namespace string) []string {
+	return []string{
+		organization + "." + namespace,
+	}
+}
+
 // get scopes from the cache
 func getScopesFromCache(jwtStr string) (scopes []string, exists bool, err error) {
 	item := jwtCache.Get(jwtStr)
@@ -185,9 +205,11 @@ func getScopesFromCache(jwtStr string) (scopes []string, exists bool, err error)
 
 	// check cache expiration
 	if item.Expired() {
-		jwtCache.Delete(jwtStr)
-		err = fmt.Errorf("expired JWT token")
-		return
+		// check JWT expired
+		_, err = checkJWTExpiration(jwtStr)
+		if err != nil {
+			return
+		}
 	}
 
 	scopes = cacheVal.scopes
@@ -220,10 +242,11 @@ func checkJWTGetScopes(jwtStr string) ([]string, int64, error) {
 	if !ok {
 		return nil, 0, fmt.Errorf("invalid expiration claims in token")
 	}
+
 	return scopes, int64(exp), nil
 }
 
-func checkJWTExpiration(jwtStr string) error {
+func checkJWTExpiration(jwtStr string) (int64, error) {
 	token, err := jwtgo.Parse(jwtStr, func(token *jwtgo.Token) (interface{}, error) {
 		if token.Method != jwtgo.SigningMethodES384 {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
@@ -232,24 +255,24 @@ func checkJWTExpiration(jwtStr string) error {
 	})
 
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	claims, ok := token.Claims.(jwtgo.MapClaims)
 	if !(ok && token.Valid) {
-		return fmt.Errorf("invalid JWT token")
+		return 0, fmt.Errorf("invalid JWT token")
 	}
 
 	expFloat, ok := claims["exp"].(float64)
 	if !ok {
-		return fmt.Errorf("invalid expiration claims in token")
+		return 0, fmt.Errorf("invalid expiration claims in token")
 	}
 	exp := int64(expFloat)
 	if time.Until(time.Unix(exp, 0)).Seconds() < 0 {
-		return fmt.Errorf("expired JWT token")
+		return 0, fmt.Errorf("expired JWT token")
 	}
 
-	return nil
+	return exp, nil
 }
 
 func getScopes(jwtStr string) ([]string, error) {

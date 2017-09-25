@@ -5,6 +5,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/zero-os/0-stor/client"
+	"github.com/zero-os/0-stor/client/meta"
 )
 
 // package Errors
@@ -17,6 +18,7 @@ type Client interface {
 	Close()
 	Read(key []byte) ([]byte, error)
 	Write(key []byte, value []byte) error
+	KeyExists(key []byte) bool
 }
 
 // StorClient implementation
@@ -59,4 +61,20 @@ func (sc *storClient) Write(key []byte, value []byte) error {
 	defer log.Debug("Done writing to the 0-stor")
 	_, err := sc.client.Write(key, value, nil)
 	return err
+}
+
+func (sc *storClient) KeyExists(key []byte) bool {
+	log.Debug("Checking if key is in the 0-stor...")
+	defer log.Debug("Done checking the 0-stor")
+
+	_, err := sc.client.GetMeta(key)
+
+	if err != nil {
+		if err != meta.ErrMetadataNotFound {
+			log.Errorf("Error checking if key in stor: %s", err)
+		}
+		return false
+	}
+
+	return true
 }

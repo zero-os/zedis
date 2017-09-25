@@ -18,8 +18,11 @@ func init() {
 	connsJWTLock = &sync.Mutex{}
 	zConfig = new(config.Zedis)
 	zConfig.AuthCommands = make(map[string]struct{})
-	zConfig.AuthCommands["SET"] = struct{}{}
 
+	// manually set each command to require authentication
+	zConfig.AuthCommands["SET"] = struct{}{}
+	zConfig.AuthCommands["GET"] = struct{}{}
+	zConfig.AuthCommands["EXISTS"] = struct{}{}
 }
 
 func TestPing(t *testing.T) {
@@ -88,15 +91,10 @@ func TestSet(t *testing.T) {
 	}
 
 	set(conn, cmd)
-	assert.Equal(t, "ERR no authentication token found for this connection", conn.s)
+	assert.Equal(t, unAuthMsg, conn.s)
 
 	// valid args and jwt present
 	connsJWT[conn] = "aJWT"
-	cmd.Args = [][]byte{
-		[]byte("SET"),
-		[]byte("key"),
-		[]byte("value"),
-	}
 
 	set(conn, cmd)
 	assert.Equal(t, "OK", conn.s)
@@ -104,17 +102,12 @@ func TestSet(t *testing.T) {
 
 	// invalid jwt
 	stillValidWithScopes = stubStillValidWithScopesErr
-	cmd.Args = [][]byte{
-		[]byte("SET"),
-		[]byte("key"),
-		[]byte("value"),
-	}
 
 	set(conn, cmd)
 	assert.Equal(t, "ERR JWT invalid: a stub error", conn.s)
 
 	// invalid command length
-	permissionValidator = stubAuthValidatorErr
+	permissionValidator = stubAuthValidator
 	cmd.Args = [][]byte{
 		[]byte("SET"),
 		[]byte("key"),
@@ -125,21 +118,34 @@ func TestSet(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
+	stillValidWithScopes = stubStillValidWithScopes
 	storClient = newStubStorClient()
 	storClient.Write([]byte("hello"), []byte("world"))
 	conn := new(stubConn)
 	var cmd redcon.Command
 
-	// valid command args
+	// valid command args, missing JWT
 	cmd.Args = [][]byte{
 		[]byte("GET"),
 		[]byte("hello"),
 	}
 
 	get(conn, cmd)
+	assert.Equal(t, unAuthMsg, conn.s)
+
+	// valid args, valid JWT
+	connsJWT[conn] = "aJWT"
+	get(conn, cmd)
 	assert.Equal(t, "world", conn.s)
 
+	// invalid jwt
+	stillValidWithScopes = stubStillValidWithScopesErr
+
+	get(conn, cmd)
+	assert.Equal(t, "ERR JWT invalid: a stub error", conn.s)
+
 	// invalid command length
+	stillValidWithScopes = stubStillValidWithScopes
 	cmd.Args = [][]byte{
 		[]byte("GET"),
 		[]byte("hello"),
@@ -148,6 +154,79 @@ func TestGet(t *testing.T) {
 
 	get(conn, cmd)
 	assert.Equal(t, "ERR wrong number of arguments for 'GET' command", conn.s)
+}
+
+func TestExists(t *testing.T) {
+	stillValidWithScopes = stubStillValidWithScopes
+	storClient = newStubStorClient()
+	storClient.Write([]byte("hello"), []byte("world"))
+	storClient.Write([]byte("lorem"), []byte("ipsum"))
+	storClient.Write([]byte("foo"), []byte("bar"))
+	conn := new(stubConn)
+	var cmd redcon.Command
+
+	// valid command args, missing JWT
+	cmd.Args = [][]byte{
+		[]byte("EXISTS"),
+		[]byte("hello"),
+	}
+
+	exists(conn, cmd)
+	assert.Equal(t, unAuthMsg, conn.s)
+
+	// invalid jwt
+	connsJWT[conn] = "aJWT"
+	stillValidWithScopes = stubStillValidWithScopesErr
+
+	exists(conn, cmd)
+	assert.Equal(t, "ERR JWT invalid: a stub error", conn.s)
+
+	// invalid command length
+	stillValidWithScopes = stubStillValidWithScopes
+	cmd.Args = [][]byte{
+		[]byte("EXISTS"),
+	}
+
+	exists(conn, cmd)
+	assert.Equal(t, "ERR wrong number of arguments for 'EXISTS' command", conn.s)
+
+	// valid args, valid JWT
+	cmd.Args = [][]byte{
+		[]byte("EXISTS"),
+		[]byte("hello"),
+	}
+	exists(conn, cmd)
+	assert.Equal(t, "1", conn.s)
+
+	// check 2 present keys
+	// valid args, valid JWT
+	cmd.Args = [][]byte{
+		[]byte("EXISTS"),
+		[]byte("hello"),
+		[]byte("lorem"),
+	}
+	exists(conn, cmd)
+	assert.Equal(t, "2", conn.s)
+
+	// check 3 present keys
+	cmd.Args = [][]byte{
+		[]byte("EXISTS"),
+		[]byte("hello"),
+		[]byte("lorem"),
+		[]byte("foo"),
+	}
+	exists(conn, cmd)
+	assert.Equal(t, "3", conn.s)
+
+	// check 2 presents keys and 1 non present
+	cmd.Args = [][]byte{
+		[]byte("EXISTS"),
+		[]byte("hello"),
+		[]byte("lorem"),
+		[]byte("not_a_key"),
+	}
+	exists(conn, cmd)
+	assert.Equal(t, "2", conn.s)
 }
 
 func TestUnknown(t *testing.T) {
@@ -218,6 +297,10 @@ func (c *stubStorClient) Read(key []byte) ([]byte, error) {
 func (c *stubStorClient) Write(key []byte, value []byte) error {
 	c.stor[string(key)] = value
 	return nil
+}
+func (c *stubStorClient) KeyExists(key []byte) bool {
+	_, ok := c.stor[string(key)]
+	return ok
 }
 
 // stub validator that returns nil (success)

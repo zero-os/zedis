@@ -9,6 +9,7 @@ import (
 var (
 	permissionValidator  = jwt.ValidatePermission
 	stillValidWithScopes = jwt.StillValidWithScopes
+	unAuthMsg            = "ERR no authentication token found for this connection"
 )
 
 func ping(conn redcon.Conn) {
@@ -58,7 +59,7 @@ func set(conn redcon.Conn, cmd redcon.Command) {
 		jwtStr, ok := connsJWT[conn]
 		connsJWTLock.Unlock()
 		if !ok {
-			conn.WriteError("ERR no authentication token found for this connection")
+			conn.WriteError(unAuthMsg)
 			return
 		}
 		err := stillValidWithScopes(jwtStr, jwt.WriteScopes(zConfig.JWTOrganization, zConfig.JWTNamespace))
@@ -86,7 +87,7 @@ func get(conn redcon.Conn, cmd redcon.Command) {
 		jwtStr, ok := connsJWT[conn]
 		connsJWTLock.Unlock()
 		if !ok {
-			conn.WriteError("ERR no authentication token found for this connection")
+			conn.WriteError(unAuthMsg)
 			return
 		}
 		err := stillValidWithScopes(jwtStr, jwt.ReadScopes(zConfig.JWTOrganization, zConfig.JWTNamespace))
@@ -104,6 +105,40 @@ func get(conn redcon.Conn, cmd redcon.Command) {
 	}
 
 	conn.WriteBulk(val)
+}
+
+func exists(conn redcon.Conn, cmd redcon.Command) {
+	log.Debugf("received EXISTS request from %s", conn.RemoteAddr())
+	if len(cmd.Args) < 2 {
+		conn.WriteError("ERR wrong number of arguments for '" + string(cmd.Args[0]) + "' command")
+		return
+	}
+
+	// check authentication
+	_, authorize := zConfig.AuthCommands[string(cmd.Args[0])]
+	if authorize {
+		connsJWTLock.Lock()
+		jwtStr, ok := connsJWT[conn]
+		connsJWTLock.Unlock()
+		if !ok {
+			conn.WriteError(unAuthMsg)
+			return
+		}
+		err := stillValidWithScopes(jwtStr, jwt.ReadScopes(zConfig.JWTOrganization, zConfig.JWTNamespace))
+		if err != nil {
+			conn.WriteError("ERR JWT invalid: " + err.Error())
+			return
+		}
+	}
+
+	keysFound := 0
+	for _, key := range cmd.Args[1:] {
+		if storClient.KeyExists(key) {
+			keysFound++
+		}
+	}
+
+	conn.WriteInt(keysFound)
 }
 
 func unknown(conn redcon.Conn, cmd redcon.Command) {

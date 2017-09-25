@@ -78,6 +78,8 @@ func handler(conn redcon.Conn, cmd redcon.Command) {
 		set(conn, cmd)
 	case "get":
 		get(conn, cmd)
+	case "exists":
+		exists(conn, cmd)
 	default:
 		unknown(conn, cmd)
 	}

@@ -53,7 +53,7 @@ func TestJWT(t *testing.T) {
 	// test expired token
 	err = ValidatePermission(expiredToken, org, namespace)
 	assert.Error(err)
-	log.Error(err)
+	log.Errorf("expected error: %v", err)
 	// test expired token in cache
 	err = ValidatePermission(expiredToken, org, namespace)
 	assert.Error(err)
@@ -61,7 +61,7 @@ func TestJWT(t *testing.T) {
 	// test token without zedis scopes
 	err = ValidatePermission(invalidOrgtoken, org, namespace)
 	assert.Error(err)
-	log.Error(err)
+	log.Errorf("expected error: %v", err)
 }
 
 func TestStillValidWithScopes(t *testing.T) {
@@ -80,15 +80,14 @@ func TestStillValidWithScopes(t *testing.T) {
 
 	// test if write token with read scopes
 	err = StillValidWithScopes(writeToken, ReadScopes(org, namespace))
-	//assert.Error(err)
-	log.Error(err)
+	assert.Error(err)
+	log.Errorf("expected error: %v", err)
 
 	// check if admin token has read and write rights
 	err = StillValidWithScopes(adminToken, ReadScopes(org, namespace))
 	assert.NoError(err, "admin should have read access")
 	err = StillValidWithScopes(adminToken, WriteScopes(org, namespace))
 	assert.NoError(err, "admin should have write access")
-
 }
 
 func getToken(t *testing.T, hoursValid time.Duration, perm itsyouonline.Permission, org, namespace string) string {
