@@ -32,7 +32,7 @@ func init() {
 	SetJWTPublicKey(string(b))
 }
 
-func TestJWT(t *testing.T) {
+func TestValidatePermission(t *testing.T) {
 	// init data
 	assert := assert.New(t)
 
@@ -42,52 +42,65 @@ func TestJWT(t *testing.T) {
 	invalidOrgtoken := getToken(t, 24, itsyouonline.Permission{Write: true}, "not"+org, namespace)
 
 	// test valid permission
-	err := ValidatePermission(writeToken, org, namespace)
+	err := ValidatePermission(writeToken, org, namespace, nil)
 	assert.NoError(err)
 	// test again to test cached restult
-	err = ValidatePermission(writeToken, org, namespace)
+	err = ValidatePermission(writeToken, org, namespace, nil)
 	assert.NoError(err)
-	err = ValidatePermission(adminToken, org, namespace)
+	err = ValidatePermission(adminToken, org, namespace, nil)
 	assert.NoError(err)
 
 	// test expired token
-	err = ValidatePermission(expiredToken, org, namespace)
+	err = ValidatePermission(expiredToken, org, namespace, nil)
 	assert.Error(err)
 	log.Errorf("expected error: %v", err)
 	// test expired token in cache
-	err = ValidatePermission(expiredToken, org, namespace)
+	err = ValidatePermission(expiredToken, org, namespace, nil)
 	assert.Error(err)
 
 	// test token without zedis scopes
-	err = ValidatePermission(invalidOrgtoken, org, namespace)
+	err = ValidatePermission(invalidOrgtoken, org, namespace, nil)
 	assert.Error(err)
 	log.Errorf("expected error: %v", err)
 }
 
-func TestStillValidWithScopes(t *testing.T) {
+func TestValidatePermissionWithScopes(t *testing.T) {
 	assert := assert.New(t)
 	writeToken := getToken(t, 24, itsyouonline.Permission{Write: true}, org, namespace)
 	readToken := getToken(t, 24, itsyouonline.Permission{Read: true}, org, namespace)
 	adminToken := getToken(t, 24, itsyouonline.Permission{Admin: true}, org, namespace)
 
 	// test if write token is valid
-	err := StillValidWithScopes(writeToken, WriteScopes(org, namespace))
+	err := ValidatePermission(writeToken, org, namespace, WriteScopes)
 	assert.NoError(err)
 
 	// test if read token is valid
-	err = StillValidWithScopes(readToken, ReadScopes(org, namespace))
+	err = ValidatePermission(readToken, org, namespace, ReadScopes)
 	assert.NoError(err)
 
-	// test if write token with read scopes
-	err = StillValidWithScopes(writeToken, ReadScopes(org, namespace))
+	// test write token with read scopes
+	err = ValidatePermission(writeToken, org, namespace, ReadScopes)
 	assert.Error(err)
 	log.Errorf("expected error: %v", err)
 
 	// check if admin token has read and write rights
-	err = StillValidWithScopes(adminToken, ReadScopes(org, namespace))
+	err = ValidatePermission(adminToken, org, namespace, ReadScopes)
 	assert.NoError(err, "admin should have read access")
-	err = StillValidWithScopes(adminToken, WriteScopes(org, namespace))
+	err = ValidatePermission(adminToken, org, namespace, WriteScopes)
 	assert.NoError(err, "admin should have write access")
+}
+
+func TestRemoveScopePrefix(t *testing.T) {
+	assert := assert.New(t)
+
+	scope := org + "." + namespace
+	withPrefix := "user:memberof:" + scope
+
+	resScope := removeScopePrefix(scope)
+	assert.Equal(scope, resScope)
+
+	resScopePrefix := removeScopePrefix(withPrefix)
+	assert.Equal(scope, resScopePrefix)
 }
 
 func getToken(t *testing.T, hoursValid time.Duration, perm itsyouonline.Permission, org, namespace string) string {

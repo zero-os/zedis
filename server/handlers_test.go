@@ -11,6 +11,7 @@ import (
 	"github.com/chrisvdg/redcon"
 	"github.com/stretchr/testify/assert"
 	"github.com/zero-os/zedis/config"
+	"github.com/zero-os/zedis/server/jwt"
 )
 
 func init() {
@@ -77,7 +78,7 @@ func TestAuth(t *testing.T) {
 }
 
 func TestSet(t *testing.T) {
-	stillValidWithScopes = stubStillValidWithScopes
+	permissionValidator = stubAuthValidator
 	stubStorClient := newStubStorClient()
 	storClient = stubStorClient
 	conn := new(stubConn)
@@ -101,7 +102,7 @@ func TestSet(t *testing.T) {
 	assert.Equal(t, []byte("value"), stubStorClient.stor["key"])
 
 	// invalid jwt
-	stillValidWithScopes = stubStillValidWithScopesErr
+	permissionValidator = stubAuthValidatorErr
 
 	set(conn, cmd)
 	assert.Equal(t, "ERR JWT invalid: a stub error", conn.s)
@@ -118,7 +119,7 @@ func TestSet(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	stillValidWithScopes = stubStillValidWithScopes
+	permissionValidator = stubAuthValidator
 	storClient = newStubStorClient()
 	storClient.Write([]byte("hello"), []byte("world"))
 	conn := new(stubConn)
@@ -139,13 +140,13 @@ func TestGet(t *testing.T) {
 	assert.Equal(t, "world", conn.s)
 
 	// invalid jwt
-	stillValidWithScopes = stubStillValidWithScopesErr
+	permissionValidator = stubAuthValidatorErr
 
 	get(conn, cmd)
 	assert.Equal(t, "ERR JWT invalid: a stub error", conn.s)
 
 	// invalid command length
-	stillValidWithScopes = stubStillValidWithScopes
+	permissionValidator = stubAuthValidator
 	cmd.Args = [][]byte{
 		[]byte("GET"),
 		[]byte("hello"),
@@ -157,7 +158,7 @@ func TestGet(t *testing.T) {
 }
 
 func TestExists(t *testing.T) {
-	stillValidWithScopes = stubStillValidWithScopes
+	permissionValidator = stubAuthValidator
 	storClient = newStubStorClient()
 	storClient.Write([]byte("hello"), []byte("world"))
 	storClient.Write([]byte("lorem"), []byte("ipsum"))
@@ -176,13 +177,13 @@ func TestExists(t *testing.T) {
 
 	// invalid jwt
 	connsJWT[conn] = "aJWT"
-	stillValidWithScopes = stubStillValidWithScopesErr
+	permissionValidator = stubAuthValidatorErr
 
 	exists(conn, cmd)
 	assert.Equal(t, "ERR JWT invalid: a stub error", conn.s)
 
 	// invalid command length
-	stillValidWithScopes = stubStillValidWithScopes
+	permissionValidator = stubAuthValidator
 	cmd.Args = [][]byte{
 		[]byte("EXISTS"),
 	}
@@ -228,7 +229,6 @@ func TestExists(t *testing.T) {
 	exists(conn, cmd)
 	assert.Equal(t, "2", conn.s)
 }
-
 func TestUnknown(t *testing.T) {
 	var cmd redcon.Command
 	cmd.Args = [][]byte{
@@ -298,27 +298,17 @@ func (c *stubStorClient) Write(key []byte, value []byte) error {
 	c.stor[string(key)] = value
 	return nil
 }
-func (c *stubStorClient) KeyExists(key []byte) bool {
+func (c *stubStorClient) KeyExists(key []byte) (bool, error) {
 	_, ok := c.stor[string(key)]
-	return ok
+	return ok, nil
 }
 
 // stub validator that returns nil (success)
-func stubAuthValidator(jwtStr, organization, namespace string) error {
+func stubAuthValidator(jwtStr, organization, namespace string, getExpectedScopes jwt.GetScopes) error {
 	return nil
 }
 
 // stub validator that returns "a stub error" error
-func stubAuthValidatorErr(jwtStr, organization, namespace string) error {
-	return errors.New("a stub error")
-}
-
-// stub still valid validator that returns nil
-func stubStillValidWithScopes(jwtStr string, scopes []string) error {
-	return nil
-}
-
-// stub still valid validator that returns an error
-func stubStillValidWithScopesErr(jwtStr string, scopes []string) error {
+func stubAuthValidatorErr(jwtStr, organization, namespace string, getExpectedScopes jwt.GetScopes) error {
 	return errors.New("a stub error")
 }

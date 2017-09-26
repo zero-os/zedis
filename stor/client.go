@@ -18,7 +18,7 @@ type Client interface {
 	Close()
 	Read(key []byte) ([]byte, error)
 	Write(key []byte, value []byte) error
-	KeyExists(key []byte) bool
+	KeyExists(key []byte) (bool, error)
 }
 
 // StorClient implementation
@@ -63,7 +63,7 @@ func (sc *storClient) Write(key []byte, value []byte) error {
 	return err
 }
 
-func (sc *storClient) KeyExists(key []byte) bool {
+func (sc *storClient) KeyExists(key []byte) (bool, error) {
 	log.Debug("Checking if key is in the 0-stor...")
 	defer log.Debug("Done checking the 0-stor")
 
@@ -71,10 +71,10 @@ func (sc *storClient) KeyExists(key []byte) bool {
 
 	if err != nil {
 		if err != meta.ErrMetadataNotFound {
-			log.Errorf("Error checking if key in stor: %s", err)
+			return false, err
 		}
-		return false
+		return false, nil
 	}
 
-	return true
+	return true, nil
 }
