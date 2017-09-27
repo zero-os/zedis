@@ -8,8 +8,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/chrisvdg/redcon"
 	"github.com/stretchr/testify/assert"
+	"github.com/tidwall/redcon"
 	"github.com/zero-os/zedis/config"
 	"github.com/zero-os/zedis/server/jwt"
 )

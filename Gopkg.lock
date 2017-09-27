@@ -14,12 +14,6 @@
   version = "v7"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/chrisvdg/redcon"
-  packages = ["."]
-  revision = "bf7922c96455f73a7fb5509df35fb7c80ff138e7"
-
-[[projects]]
   name = "github.com/coreos/etcd"
   packages = ["auth/authpb","clientv3","etcdserver/api/v3rpc/rpctypes","etcdserver/etcdserverpb","mvcc/mvccpb"]
   revision = "bb66589f8cf18960c7f3d56b1b83753caeed9c7a"
@@ -86,6 +80,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/tidwall/redcon"
+  packages = ["."]
+  revision = "f2794a0a30ffba81a2b2e26e9493185b72811120"
+
+[[projects]]
+  branch = "master"
   name = "github.com/zero-os/0-stor"
   packages = ["client","client/itsyouonline","client/lib","client/lib/chunker","client/lib/distribution","client/lib/encrypt","client/meta","client/meta/schema","client/stor","grpc_store","server/db","server/manager"]
   revision = "d1b63038a43f9073b96a42db1e2765ee17a34550"
@@ -147,6 +147,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ff142b334c052b43ff8a342d2014ae837dff628d87c2b7afee2f29fe9f81cab2"
+  inputs-digest = "9f27c9f187fb2851c8556625b732d3001f2ff479e55b0ddf54adc506c868c1d0"
   solver-name = "gps-cdcl"
   solver-version = 1

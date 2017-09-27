@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/chrisvdg/redcon"
+	"github.com/tidwall/redcon"
 	"github.com/zero-os/zedis/config"
 	"github.com/zero-os/zedis/stor"
 )

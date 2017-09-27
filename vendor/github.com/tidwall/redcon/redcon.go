@@ -157,7 +157,7 @@ func (s *Server) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.ln == nil {
-		return errors.New("can not close nil listener")
+		return errors.New("not serving")
 	}
 	s.done = true
 	return s.ln.Close()
@@ -174,7 +174,7 @@ func (s *TLSServer) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.ln == nil {
-		return errors.New("can not close nil listener")
+		return errors.New("not serving")
 	}
 	s.done = true
 	return s.ln.Close()
